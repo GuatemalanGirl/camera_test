@@ -7,14 +7,12 @@ const MONALISA_FACE = {
 };
 
 const monalisaImg = new Image();
-monalisaImg.src = 'monalisa.jpg';
+monalisaImg.src = './monalisa.jpg'; // 현재 경로 기준
 
 async function setup() {
-  // 모델 로딩
-  await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
-  await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
+  await faceapi.nets.tinyFaceDetector.loadFromUri('./models');
+  await faceapi.nets.faceLandmark68Net.loadFromUri('./models');
 
-  // 카메라 연결
   const stream = await navigator.mediaDevices.getUserMedia({ video: true });
   video.srcObject = stream;
 
@@ -29,10 +27,8 @@ async function processFrame() {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
 
-  // 모나리자 배경 그리기
   ctx.drawImage(monalisaImg, 0, 0, canvas.width, canvas.height);
 
-  // 얼굴 인식
   const detection = await faceapi
     .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
     .withFaceLandmarks();
@@ -40,7 +36,6 @@ async function processFrame() {
   if (detection) {
     const box = detection.detection.box;
 
-    // 사용자 얼굴 crop
     const faceCanvas = document.createElement('canvas');
     faceCanvas.width = box.width;
     faceCanvas.height = box.height;
@@ -50,7 +45,6 @@ async function processFrame() {
       0, 0, box.width, box.height
     );
 
-    // 모나리자 얼굴 위치에 맞게 합성
     ctx.drawImage(
       faceCanvas,
       0, 0, box.width, box.height,
@@ -65,8 +59,8 @@ const downloadBtn = document.getElementById('downloadBtn');
 let lastCaptured = null;
 
 captureBtn.addEventListener('click', async () => {
-  await processFrame(); // 현재 프레임 처리
-  lastCaptured = canvas.toDataURL('image/png'); // 이미지 저장
+  await processFrame();
+  lastCaptured = canvas.toDataURL('image/png');
   alert('📸 촬영 완료! 다운로드할 수 있어요.');
 });
 
