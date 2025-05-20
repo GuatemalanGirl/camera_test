@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>모나리자 얼굴 합성</title>
+  <style>
+    video, canvas {
+      width: 100%;
+      max-width: 400px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>모나리자 얼굴 합성</h2>
+  <video id="video" autoplay muted playsinline></video>
+  <canvas id="canvas"></canvas>
+
+  <div style="margin-top: 10px;">
+    <button id="captureBtn">📸 사진 촬영</button>
+    <button id="downloadBtn">💾 다운로드</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+  <script src="script.js"></script>
+  
+</body>
+</html>
