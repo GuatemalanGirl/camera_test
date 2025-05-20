@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="UTF-8">
   <title>모나리자 얼굴 합성</title>
@@ -7,22 +7,33 @@
     video, canvas {
       width: 100%;
       max-width: 400px;
+      height: auto;
+      border: 1px solid #ccc;
+      margin-top: 10px;
+    }
+    button {
+      margin: 5px;
+      padding: 10px;
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
 
 <h2>모나리자 얼굴 합성</h2>
-  <video id="video" autoplay muted playsinline></video>
-  <canvas id="canvas"></canvas>
 
-  <div style="margin-top: 10px;">
-    <button id="captureBtn">📸 사진 촬영</button>
-    <button id="downloadBtn">💾 다운로드</button>
-  </div>
+<video id="video" autoplay muted playsinline></video>
+<canvas id="canvas"></canvas>
 
-  <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
-  <script src="script.js"></script>
-  
+<div>
+  <button id="captureBtn">📸 사진 촬영</button>
+  <button id="downloadBtn">💾 다운로드</button>
+</div>
+
+<!-- face-api.js -->
+<script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+<!-- 사용자 스크립트 -->
+<script src="script.js"></script>
+
 </body>
 </html>
