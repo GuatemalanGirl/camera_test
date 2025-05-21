@@ -10,13 +10,26 @@ async function setup() {
     await faceapi.nets.faceLandmark68Net.loadFromUri('./models');
     console.log("모델 로딩 완료");
 
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const constraints = {
+      video: {
+        facingMode: { ideal: 'user' }, // ✅ iOS에서 전면 카메라 요청
+        width: { ideal: 640 },
+        height: { ideal: 480 }
+      },
+      audio: false
+    };
+
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
     video.srcObject = stream;
+
+    // ✅ iOS Safari는 video 요소가 'playsinline'이어야 자동 재생됨
+    video.setAttribute('playsinline', true); // 필수!
   } catch (error) {
     alert('웹캠을 사용할 수 없거나 모델 로딩에 실패했습니다.');
     console.error(error);
   }
 }
+
 
 async function processFrame() {
   try {
