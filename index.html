@@ -3,16 +3,14 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <!-- iOS 웹앱 & Android theme-color 지정 -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="theme-color" content="#fafafa"/>
-  <title>MonaLisa 실시간 합성</title>
+  <title>MonaLisa 실시간 얼굴 합성</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- 원본 비율 유지 이미지 -->
   <img
     id="mona-lisa"
     src="monalisa.jpg"
@@ -20,36 +18,18 @@
     loading="lazy"
   />
 
-  <!-- 비디오 + 캔버스 컨테이너 -->
   <div id="video-container">
-    <video
-      id="video"
-      autoplay
-      playsinline
-      muted
-    ></video>
+    <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
   </div>
 
-  <!-- 컨트롤 버튼 -->
   <div id="controls">
-    <button
-      id="captureBtn"
-      type="button"
-      aria-disabled="false"
-    >사진 찍기</button>
-    <button
-      id="saveBtn"
-      type="button"
-      aria-disabled="true"
-      style="display:none;"
-    >저장하기</button>
+    <button id="captureBtn" type="button" aria-disabled="false">사진 찍기</button>
+    <button id="saveBtn"    type="button" aria-disabled="true" style="display:none;">저장하기</button>
   </div>
 
-  <!-- face-api.js & Delaunator -->
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <script defer src="https://unpkg.com/delaunator@5.0.0/delaunator.min.js"></script>
-  <!-- 메인 스크립트 -->
   <script defer src="script.js"></script>
 </body>
 </html>
