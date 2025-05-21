@@ -1,39 +1,22 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>모나리자 얼굴 합성</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>monalishot</title>
   <style>
-    video, canvas {
-      width: 100%;
-      max-width: 400px;
-      height: auto;
-      border: 1px solid #ccc;
-      margin-top: 10px;
-    }
-    button {
-      margin: 5px;
-      padding: 10px;
-      font-size: 16px;
-    }
+    body { font-family: sans-serif; text-align: center; margin-top: 20px; }
+    canvas, video, img { display: block; margin: 10px auto; }
   </style>
 </head>
 <body>
+  <h1>모나리자 얼굴 합성</h1>
+  <video id="video" width="640" height="480" autoplay muted></video>
+  <button id="captureBtn">촬영 및 합성</button>
+  <canvas id="canvas" width="640" height="480"></canvas>
+  <a id="downloadLink" download="monalisa_result.png">이미지 다운로드</a>
 
-<h2>모나리자 얼굴 합성</h2>
-
-<video id="video" autoplay muted playsinline></video>
-<canvas id="canvas"></canvas>
-
-<div>
-  <button id="captureBtn">📸 사진 촬영</button>
-  <button id="downloadBtn">💾 다운로드</button>
-</div>
-
-<!-- face-api.js -->
-<script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
-<!-- 사용자 스크립트 -->
-<script src="script.js"></script>
-
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+  <script defer src="script.js"></script>
 </body>
 </html>
