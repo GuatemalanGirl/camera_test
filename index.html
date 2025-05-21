@@ -1,27 +1,69 @@
-<!-- index.html -->
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <title>으악 내가 모나리자라닝,,</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <div id="container">
-    <img id="mona-lisa" src="monalisa.jpg" alt="Mona Lisa">
-    <canvas id="canvas"></canvas>
-  </div>
+// script.js
+const monaImg = document.getElementById('mona-lisa');
+const canvas  = document.getElementById('canvas');
+const video   = document.getElementById('video');
+const startBtn= document.getElementById('start');
+const snapBtn = document.getElementById('snap');
+const saveBtn = document.getElementById('save');
+const ctx     = canvas.getContext('2d');
 
-  <!-- 비디오 스트림은 화면에 표시하지 않음 -->
-  <video id="video" autoplay muted playsinline style="display:none;"></video>
+const options = new faceapi.TinyFaceDetectorOptions({ inputSize:128, scoreThreshold:0.5 });
+let monaBox;
 
-  <div id="controls">
-    <button id="snap">사진 찍기</button>
-    <button id="save">저장하기</button>
-  </div>
+// 모델과 이미지 로드
+async function preload() {
+  await Promise.all([
+    faceapi.nets.tinyFaceDetector.loadFromUri('./models'),
+    faceapi.nets.faceLandmark68Net.loadFromUri('./models')
+  ]);
+  await new Promise(r => monaImg.complete ? r() : (monaImg.onload = r));
+  canvas.width = monaImg.naturalWidth;
+  canvas.height= monaImg.naturalHeight;
+  const det = await faceapi.detectSingleFace(monaImg, options);
+  if (!det) throw new Error('모나리자 얼굴을 찾을 수 없습니다.');
+  monaBox = det.box;
+}
 
-  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-  <script defer src="https://unpkg.com/delaunator@5.0.0/delaunator.min.js"></script>
-  <script defer src="script.js"></script>
-</body>
-</html>
+preload().catch(e => {
+  alert(e.message);
+  console.error(e);
+});
+
+// “카메라 시작” 버튼
+startBtn.addEventListener('click', async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user' } });
+    video.srcObject = stream;
+    render();
+  } catch (err) {
+    alert('카메라 권한이 필요합니다.');
+    console.error(err);
+  }
+});
+
+// 렌더 함수
+async function render() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(monaImg, 0,0,canvas.width,canvas.height);
+
+  const det = await faceapi.detectSingleFace(video, options).withFaceLandmarks();
+  if (det) {
+    const { x:ux, y:uy, width:uw, height:uh } = det.detection.box;
+    const { x:mx, y:my, width:mw, height:mh } = monaBox;
+    ctx.drawImage(video, ux,uy,uw,uh, mx,my,mw,mh);
+  }
+
+  requestAnimationFrame(render);
+}
+
+// 사진 찍기 & 저장
+snapBtn.onclick = () => {
+  video.pause();
+  video.srcObject.getTracks().forEach(t => t.stop());
+};
+saveBtn.onclick = () => {
+  const a = document.createElement('a');
+  a.download = 'swap.png';
+  a.href     = canvas.toDataURL('image/png');
+  a.click();
+};
