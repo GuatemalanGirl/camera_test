@@ -5,6 +5,9 @@
   <meta charset="UTF-8">
   <title>Mona Lisa Face Swap</title>
   <link rel="stylesheet" href="style.css">
+  <!-- face-api.js CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script defer src="script.js"></script>
 </head>
 <body>
   <h1>으악 내가 모나리자라닝,,</h1>
@@ -25,12 +28,8 @@
   ></video>
 
   <div id="controls">
-    <button id="snap">사진 찍기</button>
-    <button id="save">저장하기</button>
+    <button id="snap" disabled>사진 찍기</button>
+    <button id="save" disabled>저장하기</button>
   </div>
-
-  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-  <script defer src="https://unpkg.com/delaunator@5.0.0/delaunator.min.js"></script>
-  <script defer src="script.js"></script>
 </body>
 </html>
