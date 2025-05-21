@@ -2,26 +2,27 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <meta name="theme-color" content="#fafafa"/>
-  <title>MonaLisa 실시간 얼굴 합성</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Mona Lisa 실시간 얼굴 합성</title>
+  <link rel="stylesheet" href="./style.css" type="text/css"/>
 </head>
 <body>
-  <img
-    id="mona-lisa"
-    src="monalisa.jpg"
-    alt="Mona Lisa"
-    loading="lazy"
-  />
-
-  <div id="video-container">
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="canvas"></canvas>
+  <div id="container">
+    <!-- 항상 보이는 Mona Lisa -->
+    <img
+      id="mona-lisa"
+      src="monalisa.jpg"
+      alt="Mona Lisa"
+      loading="lazy"
+    />
+    <!-- 얼굴 워핑 전용 캔버스 -->
+    <canvas id="canvasWarp"></canvas>
   </div>
+
+  <!-- 백그라운드용 비디오 -->
+  <video id="video" autoplay playsinline muted style="display:none;"></video>
 
   <div id="controls">
     <button id="captureBtn" type="button" aria-disabled="false">사진 찍기</button>
