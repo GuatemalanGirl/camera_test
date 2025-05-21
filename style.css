@@ -1,0 +1,51 @@
+/* styles.css */
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  background: #fafafa;
+  margin: 0;
+}
+
+#mona-lisa {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#video-container {
+  position: relative;
+  width: fit-content;
+  margin-top: 20px;
+}
+
+#video,
+#canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+#controls {
+  margin-top: 20px;
+}
+
+button {
+  padding: 10px 20px;
+  margin: 0 10px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
