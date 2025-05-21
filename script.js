@@ -1,139 +1,202 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js';
+// script.js
 
-(async function() {
-  await tf.setBackend('webgl');
-  await tf.ready();
+// —— 전역 변수 & 상수 정의 ——
+const video       = document.getElementById('video');
+const canvas      = document.getElementById('canvas');
+const ctx         = canvas.getContext('2d');
+const monaLisaImg = document.getElementById('mona-lisa');
+const captureBtn  = document.getElementById('captureBtn');
+const saveBtn     = document.getElementById('saveBtn');
 
-  const video   = document.getElementById('video');
-  const canvas  = document.getElementById('threejsCanvas');
-  const monaImg = document.getElementById('mona');
+// 얼굴 인식 옵션 (TinyFaceDetector)
+const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
 
-  function onWindowResize() {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    video.width  = vw;  video.height = vh;
-    canvas.width = vw;  canvas.height = vh;
-    renderer.setSize(vw, vh);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    camera.left   = -vw / 2;
-    camera.right  =  vw / 2;
-    camera.top    =  vh / 2;
-    camera.bottom = -vh / 2;
-    camera.updateProjectionMatrix();
-  }
+let isProcessing = false;       // 중복 프레임 처리 방지 플래그
+let monaLisaPts  = [];          // 모나리자 랜드마크 좌표
+let triangles    = [];          // Delaunay 삼각형 인덱스
 
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  video.srcObject = stream;
-  await new Promise(r => video.onloadedmetadata = r);
-  video.play();
+// —— 1) 모델 로드 & 모나리자 데이터 준비 ——
+async function loadModelsAndData() {
+  try {
+    // 병렬로 모델 로드
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri('./models'),
+      faceapi.nets.faceLandmark68Net.loadFromUri('./models')
+    ]);
 
-  const vw = video.videoWidth, vh = video.videoHeight;
-  video.width  = vw; video.height = vh;
-  canvas.width = vw; canvas.height = vh;
-
-  const detector = await faceLandmarksDetection.createDetector(
-    faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh, {
-      runtime: 'mediapipe',
-      solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh',
-      maxFaces: 1,
-      refineLandmarks: true
+    // 이미지 완전 로드 대기
+    if (!monaLisaImg.complete) {
+      await new Promise(resolve => monaLisaImg.onload = resolve);
     }
-  );
-
-  await new Promise(r => monaImg.complete ? r() : monaImg.onload = r);
-  const monaFaces = await detector.estimateFaces(monaImg);
-  if (!monaFaces.length) throw new Error('Mona Lisa 얼굴을 인식할 수 없습니다.');
-  const monaPts = monaFaces[0].keypoints.map(k => [k.x, k.y, k.z]);
-  const monaWidth  = monaImg.naturalWidth;
-  const monaHeight = monaImg.naturalHeight;
-
-  // Helper: 눈 info
-  function getFaceInfo(landmarks, idx1, idx2) {
-    const a = landmarks[idx1], b = landmarks[idx2];
-    const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-    const dist = Math.hypot(a.x - b.x, a.y - b.y);
-    const angle = Math.atan2(b.y - a.y, b.x - a.x);
-    return { center, dist, angle };
+    await prepareMonaLisa();    // 모나리자 랜드마크 감지 + Delaunay 계산
+    startVideo();               // 카메라 시작
+  } catch (err) {
+    console.error('모델/데이터 로드 실패:', err);
+    alert('모델을 불러오는 중 오류가 발생했습니다. 네트워크를 확인해주세요.');
   }
+}
 
-  // Mona Lisa 눈 info (기준)
-  const MONA_LEFT_EYE = 33, MONA_RIGHT_EYE = 263;
-  const monaInfo = getFaceInfo(monaFaces[0].keypoints, MONA_LEFT_EYE, MONA_RIGHT_EYE);
+// —— 1-1) 모나리자 얼굴 탐지 및 삼각 분할 ——
+async function prepareMonaLisa() {
+  try {
+    const res = await faceapi
+      .detectSingleFace(monaLisaImg, options)
+      .withFaceLandmarks();
+    if (!res) throw new Error('Mona Lisa 얼굴 감지 실패');
+    monaLisaPts = res.landmarks.positions.map(p => [p.x, p.y]);
+    triangles   = Delaunator.from(monaLisaPts).triangles;
+  } catch (err) {
+    console.error('MonaLisa 처리 오류:', err);
+    alert('Mona Lisa 이미지에서 얼굴을 감지하지 못했습니다.');
+  }
+}
 
-  // Delaunay 삼각분할
-  const delaunay = Delaunator.from(monaPts.map(p => [p[0], p[1]]));
-  const indices  = Array.from(delaunay.triangles);
+// —— 2) 카메라 시작 ——
+function startVideo() {
+  navigator.mediaDevices
+    .getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } })
+    .then(stream => {
+      video.srcObject = stream;
+    })
+    .catch(err => {
+      console.error('카메라 접근 실패:', err);
+      alert('카메라를 사용할 수 없습니다.');
+    });
+}
 
-  // Three.js 씬/카메라/렌더러
-  const scene    = new THREE.Scene();
-  const camera   = new THREE.OrthographicCamera(
-    -vw/2, vw/2, vh/2, -vh/2, -1000, 1000
-  );
-  camera.position.set(0, 0, 1);
-  camera.lookAt(0, 0, 0);
+// —— 3) 프레임 렌더링 (requestAnimationFrame) ——
+video.addEventListener('play', () => {
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  renderFrame();
+});
 
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-  renderer.setSize(vw, vh);
+async function renderFrame() {
+  // 캡처 모드라면 계속 그리지 않음
+  if (captureBtn.disabled) return;
 
-  // 리사이즈 이벤트 등록
-  onWindowResize();
-  window.addEventListener('resize', onWindowResize);
-  window.addEventListener('orientationchange', onWindowResize);
+  if (isProcessing) {
+    requestAnimationFrame(renderFrame);
+    return;
+  }
+  isProcessing = true;
 
-  // Mona Lisa Mesh 생성
-  const geometry  = new THREE.BufferGeometry();
-  const positions = new Float32Array(monaPts.length * 3);
-  const uvs       = new Float32Array(monaPts.length * 2);
+  try {
+    const res = await faceapi
+      .detectSingleFace(video, options)
+      .withFaceLandmarks();
+    if (res && monaLisaPts.length) {
+      const dstPts = res.landmarks.positions.map(p => [p.x, p.y]);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  monaPts.forEach(([x,y,z], i) => {
-    // Mona Lisa 원본 이미지 중앙 기준, 3D 좌표계
-    const px = x - monaWidth/2;
-    const py = (monaHeight - y) - monaHeight/2;
-    positions.set([px, py, 0], i*3);
-    uvs.set([ x / monaWidth, 1 - y / monaHeight ], i*2);
-  });
-
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute('uv',       new THREE.BufferAttribute(uvs,       2));
-  geometry.setIndex(indices);
-
-  const texture = new THREE.TextureLoader().load('monalisa.jpg');
-  const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
-  const mesh = new THREE.Mesh(geometry, material);
-  scene.add(mesh);
-
-  // 애니메이션 루프 (내 얼굴 기준 정렬)
-  async function animate() {
-    const faces = await detector.estimateFaces(video);
-    if (faces.length) {
-      const kp  = faces[0].keypoints;
-      const myInfo = getFaceInfo(kp, MONA_LEFT_EYE, MONA_RIGHT_EYE);
-
-      // (1) 스케일 적용
-      const scale = myInfo.dist / monaInfo.dist;
-      mesh.scale.set(scale, scale, 1);
-
-      // (2) 회전 적용
-      mesh.rotation.z = myInfo.angle - monaInfo.angle;
-
-      // (3) 위치 이동 (Three.js 중앙좌표계로 변환)
-      mesh.position.x = myInfo.center.x - vw/2;
-      mesh.position.y = vh/2 - myInfo.center.y;
-      mesh.position.z = 0;
-
-      // (4) 표정/형태도 내 얼굴로 변형 (키포인트)
-      const pos = geometry.attributes.position.array;
-      kp.forEach(({x,y,z}, i) => {
-        pos[i*3 + 0] = x - vw/2;
-        pos[i*3 + 1] = vh/2 - y;
-        pos[i*3 + 2] = 0;
-      });
-      geometry.attributes.position.needsUpdate = true;
+      // 미리 계산한 triangles 재사용
+      for (let i = 0; i < triangles.length; i += 3) {
+        const srcTri = [
+          monaLisaPts[triangles[i]],
+          monaLisaPts[triangles[i + 1]],
+          monaLisaPts[triangles[i + 2]],
+        ];
+        const dstTri = [
+          dstPts[triangles[i]],
+          dstPts[triangles[i + 1]],
+          dstPts[triangles[i + 2]],
+        ];
+        warpTriangle(monaLisaImg, ctx, srcTri, dstTri);
+      }
     }
-
-    renderer.render(scene, camera);
-    requestAnimationFrame(animate);
+  } catch (err) {
+    console.error('프레임 처리 오류:', err);
   }
-  animate();
 
-})();
+  isProcessing = false;
+  requestAnimationFrame(renderFrame);
+}
+
+// —— 4) 삼각형 워핑 헬퍼 함수들 ——
+function warpTriangle(img, context, src, dst) {
+  const [[x0, y0], [x1, y1], [x2, y2]] = src;
+  const [[u0, v0], [u1, v1], [u2, v2]] = dst;
+
+  context.save();
+  context.beginPath();
+  context.moveTo(u0, v0);
+  context.lineTo(u1, v1);
+  context.lineTo(u2, v2);
+  context.closePath();
+  context.clip();
+
+  const m = getAffineMatrix([x0, y0], [x1, y1], [x2, y2], [u0, v0], [u1, v1], [u2, v2]);
+  context.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+  context.drawImage(img, 0, 0);
+  context.restore();
+}
+
+function getAffineMatrix(p0, p1, p2, q0, q1, q2) {
+  const [x0, y0] = p0, [x1, y1] = p1, [x2, y2] = p2;
+  const [u0, v0] = q0, [u1, v1] = q1, [u2, v2] = q2;
+  const denom = x0*(y1 - y2) + x1*(y2 - y0) + x2*(y0 - y1);
+
+  const a = (u0*(y1 - y2) + u1*(y2 - y0) + u2*(y0 - y1)) / denom;
+  const b = (v0*(y1 - y2) + v1*(y2 - y0) + v2*(y0 - y1)) / denom;
+  const c = (u0*(x2 - x1) + u1*(x0 - x2) + u2*(x1 - x0)) / denom;
+  const d = (v0*(x2 - x1) + v1*(x0 - x2) + v2*(x1 - x0)) / denom;
+  const e = (u0*(x1*y2 - x2*y1) + u1*(x2*y0 - x0*y2) + u2*(x0*y1 - x1*y0)) / denom;
+  const f = (v0*(x1*y2 - x2*y1) + v1*(x2*y0 - x0*y2) + v2*(x0*y1 - x1*y0)) / denom;
+
+  return { a, b, c, d, e, f };
+}
+
+// —— 5) “사진 찍기” 클릭 ——
+captureBtn.addEventListener('click', () => {
+
+  video.pause();
+
+  captureBtn.disabled = true;
+  captureBtn.setAttribute('aria-disabled', 'true');
+  saveBtn.style.display = 'inline-block';
+  saveBtn.setAttribute('aria-disabled', 'false');
+});
+
+// —— 6) “저장하기” 클릭 ——
+saveBtn.addEventListener('click', () => {
+  // 1) 임시 캔버스 생성
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width  = canvas.width;
+  exportCanvas.height = canvas.height;
+  const ec = exportCanvas.getContext('2d');
+
+  // 2) 비디오 프레임 + 워핑 레이어 합성
+  ec.drawImage(video, 0, 0, canvas.width, canvas.height);
+  ec.drawImage(canvas, 0, 0);
+
+  // 3) iOS / 비iOS 분기하여 저장 처리
+  const isiOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+  if (isiOS) {
+    // Data URL → 새 창에 띄우기 (길게 눌러 “이미지 저장”)
+    const dataURL = exportCanvas.toDataURL('image/png');
+    const win = window.open('');
+    win.document.write(
+      `<img src="${dataURL}" style="max-width:100%;display:block;margin:auto;">`
+    );
+  } else {
+    // 일반 브라우저: 자동 다운로드
+    exportCanvas.toBlob(blob => {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'capture.png';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }, 'image/png');
+  }
+
+  // 4) 버튼 상태 복구 & 비디오 재시작
+  saveBtn.style.display    = 'none';
+  saveBtn.setAttribute('aria-disabled','true');
+  captureBtn.disabled      = false;
+  captureBtn.setAttribute('aria-disabled','false');
+  startVideo();
+});
+
+
+// —— 7) 페이지 로드 시 실행 ——
+window.addEventListener('load', loadModelsAndData);
