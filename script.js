@@ -2,7 +2,7 @@
 
 // —— 전역 변수 & 상수 정의 ——
 const video       = document.getElementById('video');
-const canvas      = document.getElementById('overlay');
+const canvas      = document.getElementById('canvas');
 const ctx         = canvas.getContext('2d');
 const monaLisaImg = document.getElementById('mona-lisa');
 const captureBtn  = document.getElementById('captureBtn');
