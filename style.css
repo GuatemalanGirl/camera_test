@@ -1,45 +1,19 @@
 /* styles.css */
 body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-  margin: 0;
+  margin: 0; padding: 20px;
+  display: flex; flex-direction: column; align-items: center;
   background: #fafafa;
 }
-
 #container {
-  position: relative;
-  max-width: 100%;         /* 반응형으로 부모 너비에 맞춤 */
+  position: relative; max-width: 100%;
 }
-
-#mona-lisa,
-#canvasWarp {
-  display: block;
-  width: 100%;             /* 원본 비율 유지 */
-  height: auto;
+#mona-lisa, #canvas {
+  display: block; width: 100%; height: auto;
 }
-
-#canvasWarp {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-  pointer-events: none;    /* 터치 이벤트가 뒤 버튼에 닿도록 */
+#canvas {
+  position: absolute; top: 0; left: 0; z-index: 1;
+  pointer-events: none;
 }
-
-#controls {
-  margin-top: 20px;
-}
-
-button {
-  padding: 10px 20px;
-  margin: 0 10px;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-button[aria-disabled="true"] {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+#controls { margin-top: 20px; }
+button { padding: 10px 20px; margin: 0 10px; font-size: 16px; }
+button[disabled] { opacity: .5; cursor: not-allowed; }
