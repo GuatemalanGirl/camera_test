@@ -1,6 +1,6 @@
 // script.js
 
-// ——— 전역 변수 & 상수 ———
+// —— 전역 변수 & 상수 정의 ——
 const video       = document.getElementById('video');
 const canvas      = document.getElementById('canvas');
 const ctx         = canvas.getContext('2d');
@@ -8,55 +8,71 @@ const monaLisaImg = document.getElementById('mona-lisa');
 const captureBtn  = document.getElementById('captureBtn');
 const saveBtn     = document.getElementById('saveBtn');
 
-const options = new faceapi.TinyFaceDetectorOptions({
-  inputSize: 320,
-  scoreThreshold: 0.5
-});
+// 얼굴 인식 옵션 (TinyFaceDetector)
+const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
 
-let isProcessing = false;
-let monaLisaPts  = [];
-let triangles    = [];
+let isProcessing = false;       // 중복 프레임 처리 방지 플래그
+let monaLisaPts  = [];          // 모나리자 랜드마크 좌표
+let triangles    = [];          // Delaunay 삼각형 인덱스
 
-// ——— 1) 모델 로드 & 데이터 준비 ———
+// —— 1) 모델 로드 & 모나리자 데이터 준비 ——
 async function loadModelsAndData() {
-  await Promise.all([
-    faceapi.nets.tinyFaceDetector.loadFromUri('./models'),
-    faceapi.nets.faceLandmark68Net.loadFromUri('./models')
-  ]);
+  try {
+    // 병렬로 모델 로드
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri('./models'),
+      faceapi.nets.faceLandmark68Net.loadFromUri('./models')
+    ]);
 
-  if (!monaLisaImg.complete) {
-    await new Promise(resolve => monaLisaImg.onload = resolve);
+    // 이미지 완전 로드 대기
+    if (!monaLisaImg.complete) {
+      await new Promise(resolve => monaLisaImg.onload = resolve);
+    }
+    await prepareMonaLisa();    // 모나리자 랜드마크 감지 + Delaunay 계산
+    startVideo();               // 카메라 시작
+  } catch (err) {
+    console.error('모델/데이터 로드 실패:', err);
+    alert('모델을 불러오는 중 오류가 발생했습니다. 네트워크를 확인해주세요.');
   }
-  const res = await faceapi
-    .detectSingleFace(monaLisaImg, options)
-    .withFaceLandmarks();
-  monaLisaPts = res.landmarks.positions.map(p => [p.x, p.y]);
-  triangles   = Delaunator.from(monaLisaPts).triangles;
-
-  startVideo();
 }
 
-// ——— 2) 카메라 시작 ———
+// —— 1-1) 모나리자 얼굴 탐지 및 삼각 분할 ——
+async function prepareMonaLisa() {
+  try {
+    const res = await faceapi
+      .detectSingleFace(monaLisaImg, options)
+      .withFaceLandmarks();
+    if (!res) throw new Error('Mona Lisa 얼굴 감지 실패');
+    monaLisaPts = res.landmarks.positions.map(p => [p.x, p.y]);
+    triangles   = Delaunator.from(monaLisaPts).triangles;
+  } catch (err) {
+    console.error('MonaLisa 처리 오류:', err);
+    alert('Mona Lisa 이미지에서 얼굴을 감지하지 못했습니다.');
+  }
+}
+
+// —— 2) 카메라 시작 ——
 function startVideo() {
-  navigator.mediaDevices.getUserMedia({
-    video: { width: 640, height: 480, facingMode: 'user' }
-  }).then(stream => {
-    video.srcObject = stream;
-  }).catch(err => {
-    console.error('카메라 접근 실패:', err);
-    alert('카메라를 사용할 수 없습니다.');
-  });
+  navigator.mediaDevices
+    .getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } })
+    .then(stream => {
+      video.srcObject = stream;
+    })
+    .catch(err => {
+      console.error('카메라 접근 실패:', err);
+      alert('카메라를 사용할 수 없습니다.');
+    });
 }
 
-// ——— 3) 렌더 루프 ———
+// —— 3) 프레임 렌더링 (requestAnimationFrame) ——
 video.addEventListener('play', () => {
   canvas.width  = video.videoWidth;
   canvas.height = video.videoHeight;
-  requestAnimationFrame(renderFrame);
+  renderFrame();
 });
 
 async function renderFrame() {
-  // “사진 찍기” 누르면 루프 종료
+  // 캡처 모드라면 계속 그리지 않음
   if (captureBtn.disabled) return;
 
   if (isProcessing) {
@@ -65,109 +81,121 @@ async function renderFrame() {
   }
   isProcessing = true;
 
-  // 1) 항상 비디오 배경부터
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
   try {
-    // 2) 얼굴 검출 + 랜드마크
     const res = await faceapi
       .detectSingleFace(video, options)
       .withFaceLandmarks();
-    if (res) {
+    if (res && monaLisaPts.length) {
       const dstPts = res.landmarks.positions.map(p => [p.x, p.y]);
-      // 3) Delaunay 워핑
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 미리 계산한 triangles 재사용
       for (let i = 0; i < triangles.length; i += 3) {
         const srcTri = [
           monaLisaPts[triangles[i]],
-          monaLisaPts[triangles[i+1]],
-          monaLisaPts[triangles[i+2]]
+          monaLisaPts[triangles[i + 1]],
+          monaLisaPts[triangles[i + 2]],
         ];
         const dstTri = [
           dstPts[triangles[i]],
-          dstPts[triangles[i+1]],
-          dstPts[triangles[i+2]]
+          dstPts[triangles[i + 1]],
+          dstPts[triangles[i + 2]],
         ];
         warpTriangle(monaLisaImg, ctx, srcTri, dstTri);
       }
     }
-  } catch (e) {
-    console.error('프레임 처리 오류:', e);
+  } catch (err) {
+    console.error('프레임 처리 오류:', err);
   }
 
   isProcessing = false;
   requestAnimationFrame(renderFrame);
 }
 
-// ——— 4) 워핑 헬퍼 ———
+// —— 4) 삼각형 워핑 헬퍼 함수들 ——
 function warpTriangle(img, context, src, dst) {
+  const [[x0, y0], [x1, y1], [x2, y2]] = src;
+  const [[u0, v0], [u1, v1], [u2, v2]] = dst;
+
   context.save();
   context.beginPath();
-  context.moveTo(...dst[0]);
-  context.lineTo(...dst[1]);
-  context.lineTo(...dst[2]);
+  context.moveTo(u0, v0);
+  context.lineTo(u1, v1);
+  context.lineTo(u2, v2);
   context.closePath();
   context.clip();
 
-  const m = getAffineMatrix(...src[0], ...src[1], ...src[2],
-                            ...dst[0], ...dst[1], ...dst[2]);
+  const m = getAffineMatrix([x0, y0], [x1, y1], [x2, y2], [u0, v0], [u1, v1], [u2, v2]);
   context.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
   context.drawImage(img, 0, 0);
   context.restore();
 }
 
-function getAffineMatrix(x0, y0, x1, y1, x2, y2,
-                         u0, v0, u1, v1, u2, v2) {
-  const den = x0*(y1-y2) + x1*(y2-y0) + x2*(y0-y1);
-  const a = (u0*(y1-y2) + u1*(y2-y0) + u2*(y0-y1)) / den;
-  const b = (v0*(y1-y2) + v1*(y2-y0) + v2*(y0-y1)) / den;
-  const c = (u0*(x2-x1) + u1*(x0-x2) + u2*(x1-x0)) / den;
-  const d = (v0*(x2-x1) + v1*(x0-x2) + v2*(x1-x0)) / den;
-  const e = (u0*(x1*y2-x2*y1) + u1*(x2*y0-x0*y2) + u2*(x0*y1-x1*y0)) / den;
-  const f = (v0*(x1*y2-x2*y1) + v1*(x2*y0-x0*y2) + v2*(x0*y1-x1*y0)) / den;
+function getAffineMatrix(p0, p1, p2, q0, q1, q2) {
+  const [x0, y0] = p0, [x1, y1] = p1, [x2, y2] = p2;
+  const [u0, v0] = q0, [u1, v1] = q1, [u2, v2] = q2;
+  const denom = x0*(y1 - y2) + x1*(y2 - y0) + x2*(y0 - y1);
+
+  const a = (u0*(y1 - y2) + u1*(y2 - y0) + u2*(y0 - y1)) / denom;
+  const b = (v0*(y1 - y2) + v1*(y2 - y0) + v2*(y0 - y1)) / denom;
+  const c = (u0*(x2 - x1) + u1*(x0 - x2) + u2*(x1 - x0)) / denom;
+  const d = (v0*(x2 - x1) + v1*(x0 - x2) + v2*(x1 - x0)) / denom;
+  const e = (u0*(x1*y2 - x2*y1) + u1*(x2*y0 - x0*y2) + u2*(x0*y1 - x1*y0)) / denom;
+  const f = (v0*(x1*y2 - x2*y1) + v1*(x2*y0 - x0*y2) + v2*(x0*y1 - x1*y0)) / denom;
+
   return { a, b, c, d, e, f };
 }
 
-// ——— 5) “사진 찍기” 클릭 ———
+// —— 5) “사진 찍기” 클릭 ——
 captureBtn.addEventListener('click', () => {
   captureBtn.disabled = true;
+  captureBtn.setAttribute('aria-disabled', 'true');
   saveBtn.style.display = 'inline-block';
+  saveBtn.setAttribute('aria-disabled', 'false');
 
-  // 스트림은 저장 후 중단할 거예요
+  // 비디오 스트림 완전 중단
+  if (video.srcObject) {
+    video.srcObject.getTracks().forEach(t => t.stop());
+  }
 });
 
-// ——— 6) “저장하기” 클릭 ———
+// —— 6) “저장하기” 클릭 ——
 saveBtn.addEventListener('click', () => {
-  // 1) 합성용 캔버스 생성
   const exportCanvas = document.createElement('canvas');
-  exportCanvas.width  = video.videoWidth;
-  exportCanvas.height = video.videoHeight;
+  exportCanvas.width  = canvas.width;
+  exportCanvas.height = canvas.height;
   const ec = exportCanvas.getContext('2d');
 
-  // 2) 합성 순서: 비디오 → 오버레이
-  ec.drawImage(video, 0, 0, exportCanvas.width, exportCanvas.height);
-  ec.drawImage(canvas, 0, 0, exportCanvas.width, exportCanvas.height);
+  // 1) 현재 비디오 프레임을 배경으로 복사
+  ec.drawImage(video, 0, 0, canvas.width, canvas.height);
+  // 2) 워핑된 삼각형 레이어 오버레이
+  ec.drawImage(canvas, 0, 0);
 
-  // 3) iOS 대응: Web Share API 우선, 아니면 새 탭 열기
-  exportCanvas.toBlob(async blob => {
-    const file = new File([blob], 'capture.png', { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file] });
-      } catch (err) {
-        console.error('공유 실패:', err);
-        window.open(URL.createObjectURL(blob), '_blank');
-      }
+  exportCanvas.toBlob(blob => {
+    // iOS Safari인지 감지
+    const isiOS = /iP(hone|ad|od)/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
+    if (isiOS) {
+      // Data URL 로 변환해 새 탭에서 열기 (길게 눌러 저장)
+      const reader = new FileReader();
+      reader.onloadend = () => window.open(reader.result);
+      reader.readAsDataURL(blob);
     } else {
-      window.open(URL.createObjectURL(blob), '_blank');
+      // 일반 데스크탑/안드로이드: Blob URL + download
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'capture.png';
+      link.click();
+      URL.revokeObjectURL(link.href);
     }
-
-    // 4) 스트림 중단 & 버튼 상태 복구
-    if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
-    captureBtn.disabled = false;
-    saveBtn.style.display = 'none';
   }, 'image/png');
+
+  // 버튼 상태 복구 & 비디오 재시작
+  saveBtn.style.display = 'none';
+  saveBtn.setAttribute('aria-disabled', 'true');
+  captureBtn.disabled = false;
+  captureBtn.setAttribute('aria-disabled', 'false');
+  startVideo();
 });
 
-// ——— 7) 페이지 로드 시 실행 ———
+// —— 7) 페이지 로드 시 실행 ——
 window.addEventListener('load', loadModelsAndData);
