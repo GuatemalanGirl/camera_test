@@ -1,33 +1,42 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>monalishot</title>
+  <title>MonaLisa Face Swap</title>
 </head>
 <body>
+  <!-- 사용자 카메라 스트림 -->
   <video
     id="video"
+    width="640"
+    height="480"
     autoplay
     muted
     playsinline
     webkit-playsinline
-    width="320"
-    height="240"
   ></video>
-  <button id="captureBtn">촬영 및 합성</button>
+
+  <!-- 캔버스: 워핑 결과 그리기 -->
   <canvas id="canvas" width="640" height="480"></canvas>
-  <a id="downloadLink" download="monalisa_result.png" style="display:none">이미지 다운로드</a>
+  
+  <!-- 버튼들 -->
+  <div style="margin-top: 10px;">
+    <button id="captureBtn">사진 찍기</button>
+    <button id="saveBtn" style="display:none;">저장하기</button>
+  </div>
 
-  <!-- 숨겨진 모나리자 이미지 (face-api.js 감지를 위해 필요) -->
-  <img id="mona-lisa" src="monalisa.jpg" alt="Mona Lisa" style="display:none" />
+  <!-- face-api.js 감지를 위한 숨김 Mona Lisa 이미지 -->
+  <img
+    id="mona-lisa"
+    src="monalisa.jpg"
+    alt="Mona Lisa"
+    style="display:none;"
+  />
 
-  <!-- 1) face-api.js UMD 빌드 -->
-  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script> 
-  <!-- 2) Delaunator UMD 빌드 -->
+  <!-- 외부 스크립트 로드 -->
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <script defer src="https://unpkg.com/delaunator@5.0.0/delaunator.min.js"></script>
-  <!-- 3) 내 스크립트 -->
   <script defer src="script.js"></script>
 </body>
 </html>
