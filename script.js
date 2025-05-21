@@ -72,7 +72,7 @@ video.addEventListener('play', () => {
 });
 
 async function renderFrame() {
-  // 캡처 모드라면 계속 그리지 않음
+  // 캡처 모드라면 루프 중단
   if (captureBtn.disabled) return;
 
   if (isProcessing) {
@@ -81,15 +81,19 @@ async function renderFrame() {
   }
   isProcessing = true;
 
+  // ▶️ 1) 항상 배경(비디오)부터 클리어하고 그린다
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
   try {
+    // ▶️ 2) 얼굴 검출 & 랜드마크
     const res = await faceapi
       .detectSingleFace(video, options)
       .withFaceLandmarks();
+
     if (res && monaLisaPts.length) {
       const dstPts = res.landmarks.positions.map(p => [p.x, p.y]);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // 미리 계산한 triangles 재사용
+      // ▶️ 3) 워핑된 얼굴만 캔버스 위에 오버레이
       for (let i = 0; i < triangles.length; i += 3) {
         const srcTri = [
           monaLisaPts[triangles[i]],
@@ -111,6 +115,7 @@ async function renderFrame() {
   isProcessing = false;
   requestAnimationFrame(renderFrame);
 }
+
 
 // —— 4) 삼각형 워핑 헬퍼 함수들 ——
 function warpTriangle(img, context, src, dst) {
@@ -188,7 +193,38 @@ saveBtn.addEventListener('click', () => {
     // 5) (선택) 스트림 중단: **반드시** drawImage 호출 뒤에!
     // video.srcObject.getTracks().forEach(t => t.stop());
   }, 'image/png');
+});saveBtn.addEventListener('click', () => {
+  // 1) 내보낼 캔버스 생성
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width  = video.videoWidth;
+  exportCanvas.height = video.videoHeight;
+  const ec = exportCanvas.getContext('2d');
+
+  // 2) 카메라 영상 먼저
+  ec.drawImage(video, 0, 0, exportCanvas.width, exportCanvas.height);
+  // 3) 오버레이 얼굴
+  ec.drawImage(canvas, 0, 0, exportCanvas.width, exportCanvas.height);
+
+  // 4) Blob → iOS 대응 Web Share API 또는 새 탭 열기
+  exportCanvas.toBlob(async blob => {
+    // Web Share API를 쓸 수 있으면 바로 공유/저장
+    const file = new File([blob], 'capture.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] });
+      } catch (err) {
+        console.error('공유 실패:', err);
+      }
+    } else {
+      // fallback: 새 탭으로 dataURL 열기 → 롱프레스해서 저장
+      const dataURL = await new Promise(res => exportCanvas.toDataURL('image/png', data => res(data)));
+      window.open(dataURL, '_blank');
+    }
+    // 5) (선택) 스트림 중단
+    // video.srcObject.getTracks().forEach(t => t.stop());
+  }, 'image/png');
 });
+
 
 // —— 7) 페이지 로드 시 실행 ——
 window.addEventListener('load', loadModelsAndData);
