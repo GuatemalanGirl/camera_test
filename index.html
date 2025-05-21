@@ -1,9 +1,8 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
   <meta name="theme-color" content="#fafafa"/>
   <title>Mona Lisa 실시간 얼굴 합성</title>
   <link rel="stylesheet" href="./style.css" type="text/css"/>
@@ -22,7 +21,13 @@
   </div>
 
   <!-- 백그라운드용 비디오 -->
-  <video id="video" autoplay playsinline muted style="display:none;"></video>
+  <video
+    id="video"
+    autoplay
+    playsinline
+    muted
+    style="display:none;"
+  ></video>
 
   <div id="controls">
     <button id="captureBtn" type="button" aria-disabled="false">사진 찍기</button>
