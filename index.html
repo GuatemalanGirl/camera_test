@@ -1,45 +1,55 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>MonaLisa Face Swap</title>
-  <style>
-    /* 화면 중앙 정렬용 간단 스타일 */
-    body { display: flex; flex-direction: column; align-items: center; padding: 20px; }
-    canvas { border: 1px solid #ccc; }
-  </style>
+  <!-- iOS 웹앱 & Android theme-color 지정 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="theme-color" content="#fafafa"/>
+  <title>MonaLisa 실시간 합성</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- 카메라 스트림 (숨김) -->
-  <video
-    id="video"
-    width="640"
-    height="480"
-    autoplay
-    muted
-    playsinline
-    webkit-playsinline
-    style="display:none;"
-  ></video>
-
-  <!-- 결과 그릴 캔버스 -->
-  <canvas id="canvas" width="640" height="480"></canvas>
-
-  <!-- 저장하기 버튼 -->
-  <button id="saveBtn" style="margin-top:10px;">저장하기</button>
-
-  <!-- 감지를 위한 숨김 Mona Lisa 원본 -->
+  <!-- 원본 비율 유지 이미지 -->
   <img
     id="mona-lisa"
     src="monalisa.jpg"
     alt="Mona Lisa"
-    style="display:none;"
+    loading="lazy"
   />
 
-  <!-- face-api.js 및 Delaunator -->
+  <!-- 비디오 + 캔버스 컨테이너 -->
+  <div id="video-container">
+    <video
+      id="video"
+      autoplay
+      playsinline
+      muted
+    ></video>
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <!-- 컨트롤 버튼 -->
+  <div id="controls">
+    <button
+      id="captureBtn"
+      type="button"
+      aria-disabled="false"
+    >사진 찍기</button>
+    <button
+      id="saveBtn"
+      type="button"
+      aria-disabled="true"
+      style="display:none;"
+    >저장하기</button>
+  </div>
+
+  <!-- face-api.js & Delaunator -->
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <script defer src="https://unpkg.com/delaunator@5.0.0/delaunator.min.js"></script>
+  <!-- 메인 스크립트 -->
   <script defer src="script.js"></script>
 </body>
 </html>
