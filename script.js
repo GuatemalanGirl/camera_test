@@ -161,32 +161,29 @@ captureBtn.addEventListener('click', () => {
 
 // —— 6) “저장하기” 클릭 ——
 saveBtn.addEventListener('click', () => {
+  // 1) 내보낼 캔버스 생성
   const exportCanvas = document.createElement('canvas');
   exportCanvas.width  = canvas.width;
   exportCanvas.height = canvas.height;
   const ec = exportCanvas.getContext('2d');
 
-  // 배경(모나리자) + 워핑 합성
-  ec.drawImage(monaLisaImg, 0, 0, canvas.width, canvas.height);
-  // 배경: 실시간 카메라 프레임
-  ec.drawImage(video, 0, 0, canvas.width, canvas.height);
+  // 2) 카메라 비디오 프레임을 가장 먼저 그린다
+  ec.drawImage(video, 0, 0, exportCanvas.width, exportCanvas.height);
 
-  ec.drawImage(canvas, 0, 0);
+  // 3) 그 위에 오버레이(얼굴 워핑된 캔버스)를 올린다
+  ec.drawImage(canvas, 0, 0, exportCanvas.width, exportCanvas.height);
 
+  // 4) Blob 으로 변환 → 다운로드
   exportCanvas.toBlob(blob => {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = 'monalisa_capture.png';
+    link.download = 'full_composite.png';
     link.click();
     URL.revokeObjectURL(link.href);
-  }, 'image/png');
 
-  // 버튼 상태 복구 & 비디오 재시작
-  saveBtn.style.display = 'none';
-  saveBtn.setAttribute('aria-disabled', 'true');
-  captureBtn.disabled = false;
-  captureBtn.setAttribute('aria-disabled', 'false');
-  startVideo();
+    // 5) (선택) 스트림 중단: **반드시** drawImage 호출 뒤에!
+    // video.srcObject.getTracks().forEach(t => t.stop());
+  }, 'image/png');
 });
 
 // —— 7) 페이지 로드 시 실행 ——
