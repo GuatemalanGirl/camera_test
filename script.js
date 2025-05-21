@@ -1,78 +1,60 @@
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-
-const MONALISA_FACE = {
-  x: 190, y: 140, width: 140, height: 170 // 합성될 얼굴 위치
-};
-
-const monalisaImg = new Image();
-monalisaImg.src = './monalisa.jpg'; // 현재 경로 기준
+const captureBtn = document.getElementById('captureBtn');
+const downloadLink = document.getElementById('downloadLink');
 
 async function setup() {
-  await faceapi.nets.tinyFaceDetector.loadFromUri('./models');
-  await faceapi.nets.faceLandmark68Net.loadFromUri('./models');
+  try {
+    await faceapi.nets.tinyFaceDetector.loadFromUri('./models');
+    await faceapi.nets.faceLandmark68Net.loadFromUri('./models');
+    console.log("모델 로딩 완료");
 
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  video.srcObject = stream;
-
-  video.addEventListener('play', () => {
-    setInterval(processFrame, 200);
-  });
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+  } catch (error) {
+    alert('웹캠을 사용할 수 없거나 모델 로딩에 실패했습니다.');
+    console.error(error);
+  }
 }
 
 async function processFrame() {
-  if (video.readyState < 2) return;
+  try {
+    const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
+    if (!detection) {
+      alert('얼굴을 인식하지 못했습니다. 다시 시도해 주세요.');
+      return;
+    }
 
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+    // 얼굴 영역 좌표
+    const { x, y, width, height } = detection.detection.box;
 
-  ctx.drawImage(monalisaImg, 0, 0, canvas.width, canvas.height);
+    // 모나리자 이미지 로드
+    const monalisaImg = new Image();
+    monalisaImg.src = 'monalisa.jpg';
 
-  const detection = await faceapi
-    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks();
+    monalisaImg.onload = () => {
+      // 모나리자 배경 그리기
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(monalisaImg, 0, 0, canvas.width, canvas.height);
 
-  if (detection) {
-    const box = detection.detection.box;
+      // 사용자 얼굴 캡처
+      ctx.drawImage(video, x, y, width, height, 240, 140, width, height); // 위치 조절 가능
 
-    const faceCanvas = document.createElement('canvas');
-    faceCanvas.width = box.width;
-    faceCanvas.height = box.height;
-    faceCanvas.getContext('2d').drawImage(
-      video,
-      box.x, box.y, box.width, box.height,
-      0, 0, box.width, box.height
-    );
-
-    ctx.drawImage(
-      faceCanvas,
-      0, 0, box.width, box.height,
-      MONALISA_FACE.x, MONALISA_FACE.y, MONALISA_FACE.width, MONALISA_FACE.height
-    );
+      // 다운로드 링크 갱신
+      downloadLink.href = canvas.toDataURL('image/png');
+      downloadLink.style.display = 'inline';
+    };
+    monalisaImg.onerror = () => {
+      alert('monalisa.jpg 이미지를 불러올 수 없습니다.');
+    };
+  } catch (err) {
+    alert('얼굴 처리 중 오류가 발생했습니다.');
+    console.error(err);
   }
 }
 
-const captureBtn = document.getElementById('captureBtn');
-const downloadBtn = document.getElementById('downloadBtn');
+captureBtn.addEventListener('click', processFrame);
 
-let lastCaptured = null;
-
-captureBtn.addEventListener('click', async () => {
-  await processFrame();
-  lastCaptured = canvas.toDataURL('image/png');
-  alert('📸 촬영 완료! 다운로드할 수 있어요.');
-});
-
-downloadBtn.addEventListener('click', () => {
-  if (!lastCaptured) {
-    alert('먼저 사진을 촬영하세요!');
-    return;
-  }
-  const link = document.createElement('a');
-  link.href = lastCaptured;
-  link.download = 'monalisa_swap.png';
-  link.click();
-});
-
+// 실행
 setup();
