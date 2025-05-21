@@ -148,54 +148,55 @@ function getAffineMatrix(p0, p1, p2, q0, q1, q2) {
 
 // —— 5) “사진 찍기” 클릭 ——
 captureBtn.addEventListener('click', () => {
+
+  video.pause();
+
   captureBtn.disabled = true;
   captureBtn.setAttribute('aria-disabled', 'true');
   saveBtn.style.display = 'inline-block';
   saveBtn.setAttribute('aria-disabled', 'false');
-
-  // 비디오 스트림 완전 중단
-  if (video.srcObject) {
-    video.srcObject.getTracks().forEach(t => t.stop());
-  }
 });
 
 // —— 6) “저장하기” 클릭 ——
 saveBtn.addEventListener('click', () => {
+  // 1) 임시 캔버스 생성
   const exportCanvas = document.createElement('canvas');
   exportCanvas.width  = canvas.width;
   exportCanvas.height = canvas.height;
   const ec = exportCanvas.getContext('2d');
 
-  // 1) 현재 비디오 프레임을 배경으로 복사
+  // 2) 비디오 프레임 + 워핑 레이어 합성
   ec.drawImage(video, 0, 0, canvas.width, canvas.height);
-  // 2) 워핑된 삼각형 레이어 오버레이
   ec.drawImage(canvas, 0, 0);
 
-  exportCanvas.toBlob(blob => {
-    // iOS Safari인지 감지
-    const isiOS = /iP(hone|ad|od)/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
-    if (isiOS) {
-      // Data URL 로 변환해 새 탭에서 열기 (길게 눌러 저장)
-      const reader = new FileReader();
-      reader.onloadend = () => window.open(reader.result);
-      reader.readAsDataURL(blob);
-    } else {
-      // 일반 데스크탑/안드로이드: Blob URL + download
+  // 3) iOS / 비iOS 분기하여 저장 처리
+  const isiOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+  if (isiOS) {
+    // Data URL → 새 창에 띄우기 (길게 눌러 “이미지 저장”)
+    const dataURL = exportCanvas.toDataURL('image/png');
+    const win = window.open('');
+    win.document.write(
+      `<img src="${dataURL}" style="max-width:100%;display:block;margin:auto;">`
+    );
+  } else {
+    // 일반 브라우저: 자동 다운로드
+    exportCanvas.toBlob(blob => {
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = 'capture.png';
       link.click();
       URL.revokeObjectURL(link.href);
-    }
-  }, 'image/png');
+    }, 'image/png');
+  }
 
-  // 버튼 상태 복구 & 비디오 재시작
-  saveBtn.style.display = 'none';
-  saveBtn.setAttribute('aria-disabled', 'true');
-  captureBtn.disabled = false;
-  captureBtn.setAttribute('aria-disabled', 'false');
+  // 4) 버튼 상태 복구 & 비디오 재시작
+  saveBtn.style.display    = 'none';
+  saveBtn.setAttribute('aria-disabled','true');
+  captureBtn.disabled      = false;
+  captureBtn.setAttribute('aria-disabled','false');
   startVideo();
 });
+
 
 // —— 7) 페이지 로드 시 실행 ——
 window.addEventListener('load', loadModelsAndData);
