@@ -47,15 +47,18 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.m
   const monaWidth  = monaImg.naturalWidth;
   const monaHeight = monaImg.naturalHeight;
 
-  // --- 눈 사이 거리(비율 기반) ---
+  // Helper: 눈 info
+  function getFaceInfo(landmarks, idx1, idx2) {
+    const a = landmarks[idx1], b = landmarks[idx2];
+    const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const dist = Math.hypot(a.x - b.x, a.y - b.y);
+    const angle = Math.atan2(b.y - a.y, b.x - a.x);
+    return { center, dist, angle };
+  }
+
+  // Mona Lisa 눈 info (기준)
   const MONA_LEFT_EYE = 33, MONA_RIGHT_EYE = 263;
-  const monaLeftEye = monaFaces[0].keypoints[MONA_LEFT_EYE];
-  const monaRightEye = monaFaces[0].keypoints[MONA_RIGHT_EYE];
-  const monaEyeDistPx = Math.hypot(
-    monaLeftEye.x - monaRightEye.x,
-    monaLeftEye.y - monaRightEye.y
-  );
-  const monaEyeDistNorm = monaEyeDistPx / monaWidth;
+  const monaInfo = getFaceInfo(monaFaces[0].keypoints, MONA_LEFT_EYE, MONA_RIGHT_EYE);
 
   // Delaunay 삼각분할
   const delaunay = Delaunator.from(monaPts.map(p => [p[0], p[1]]));
@@ -77,19 +80,17 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.m
   window.addEventListener('resize', onWindowResize);
   window.addEventListener('orientationchange', onWindowResize);
 
-  // Mona Lisa 원본 mesh 생성 (중앙 기준, 0~1 범위 → 비디오 크기)
+  // Mona Lisa Mesh 생성
   const geometry  = new THREE.BufferGeometry();
   const positions = new Float32Array(monaPts.length * 3);
   const uvs       = new Float32Array(monaPts.length * 2);
 
   monaPts.forEach(([x,y,z], i) => {
-    // Mona Lisa 좌표를 0~1로 정규화, 비디오 크기 기준으로 변환
-    const normX = x / monaWidth;
-    const normY = y / monaHeight;
-    const px = (normX - 0.5) * vw;
-    const py = (0.5 - normY) * vh;
+    // Mona Lisa 원본 이미지 중앙 기준, 3D 좌표계
+    const px = x - monaWidth/2;
+    const py = (monaHeight - y) - monaHeight/2;
     positions.set([px, py, 0], i*3);
-    uvs.set([ normX, 1 - normY ], i*2);
+    uvs.set([ x / monaWidth, 1 - y / monaHeight ], i*2);
   });
 
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -101,31 +102,26 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.m
   const mesh = new THREE.Mesh(geometry, material);
   scene.add(mesh);
 
-  // 애니메이션 루프 (비율 동기화)
+  // 애니메이션 루프 (내 얼굴 기준 정렬)
   async function animate() {
     const faces = await detector.estimateFaces(video);
     if (faces.length) {
       const kp  = faces[0].keypoints;
-      // 내 눈사이 거리 (비율)
-      const myLeftEye = kp[MONA_LEFT_EYE];
-      const myRightEye = kp[MONA_RIGHT_EYE];
-      const myEyeDistPx = Math.hypot(
-        myLeftEye.x - myRightEye.x,
-        myLeftEye.y - myRightEye.y
-      );
-      const myEyeDistNorm = myEyeDistPx / vw;
-      // scale = 내 얼굴 눈사이거리(비율) / Mona Lisa 눈사이거리(비율)
-      const scale = myEyeDistNorm / monaEyeDistNorm;
+      const myInfo = getFaceInfo(kp, MONA_LEFT_EYE, MONA_RIGHT_EYE);
+
+      // (1) 스케일 적용
+      const scale = myInfo.dist / monaInfo.dist;
       mesh.scale.set(scale, scale, 1);
 
-      // 얼굴 중심도 비율 기준
-      const cxNorm = ((myLeftEye.x + myRightEye.x) / 2) / vw;
-      const cyNorm = ((myLeftEye.y + myRightEye.y) / 2) / vh;
-      mesh.position.x = (cxNorm - 0.5) * vw;
-      mesh.position.y = (0.5 - cyNorm) * vh;
+      // (2) 회전 적용
+      mesh.rotation.z = myInfo.angle - monaInfo.angle;
+
+      // (3) 위치 이동 (Three.js 중앙좌표계로 변환)
+      mesh.position.x = myInfo.center.x - vw/2;
+      mesh.position.y = vh/2 - myInfo.center.y;
       mesh.position.z = 0;
 
-      // 표정 변형도 동일 (비디오 기준 중앙좌표)
+      // (4) 표정/형태도 내 얼굴로 변형 (키포인트)
       const pos = geometry.attributes.position.array;
       kp.forEach(({x,y,z}, i) => {
         pos[i*3 + 0] = x - vw/2;
