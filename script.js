@@ -163,15 +163,19 @@ captureBtn.addEventListener('click', () => {
 saveBtn.addEventListener('click', () => {
   // 1) 내보낼 캔버스 생성
   const exportCanvas = document.createElement('canvas');
-  exportCanvas.width  = canvas.width;
-  exportCanvas.height = canvas.height;
+  exportCanvas.width  = video.videoWidth;
+  exportCanvas.height = video.videoHeight;
   const ec = exportCanvas.getContext('2d');
 
   // 2) 카메라 비디오 프레임을 가장 먼저 그린다
-  ec.drawImage(video, 0, 0, exportCanvas.width, exportCanvas.height);
+  ec.drawImage(video,
+               0, 0, video.videoWidth, video.videoHeight,
+               0, 0, exportCanvas.width, exportCanvas.height);
 
   // 3) 그 위에 오버레이(얼굴 워핑된 캔버스)를 올린다
-  ec.drawImage(canvas, 0, 0, exportCanvas.width, exportCanvas.height);
+  ec.drawImage(canvas,
+               0, 0, canvas.width, canvas.height,
+               0, 0, exportCanvas.width, exportCanvas.height);
 
   // 4) Blob 으로 변환 → 다운로드
   exportCanvas.toBlob(blob => {
