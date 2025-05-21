@@ -4,9 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MonaLisa Face Swap</title>
+  <style>
+    /* 화면 중앙 정렬용 간단 스타일 */
+    body { display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    canvas { border: 1px solid #ccc; }
+  </style>
 </head>
 <body>
-  <!-- 사용자 카메라 스트림 -->
+  <!-- 카메라 스트림 (숨김) -->
   <video
     id="video"
     width="640"
@@ -15,18 +20,16 @@
     muted
     playsinline
     webkit-playsinline
+    style="display:none;"
   ></video>
 
-  <!-- 캔버스: 워핑 결과 그리기 -->
+  <!-- 결과 그릴 캔버스 -->
   <canvas id="canvas" width="640" height="480"></canvas>
-  
-  <!-- 버튼들 -->
-  <div style="margin-top: 10px;">
-    <button id="captureBtn">사진 찍기</button>
-    <button id="saveBtn" style="display:none;">저장하기</button>
-  </div>
 
-  <!-- face-api.js 감지를 위한 숨김 Mona Lisa 이미지 -->
+  <!-- 저장하기 버튼 -->
+  <button id="saveBtn" style="margin-top:10px;">저장하기</button>
+
+  <!-- 감지를 위한 숨김 Mona Lisa 원본 -->
   <img
     id="mona-lisa"
     src="monalisa.jpg"
@@ -34,7 +37,7 @@
     style="display:none;"
   />
 
-  <!-- 외부 스크립트 로드 -->
+  <!-- face-api.js 및 Delaunator -->
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <script defer src="https://unpkg.com/delaunator@5.0.0/delaunator.min.js"></script>
   <script defer src="script.js"></script>
