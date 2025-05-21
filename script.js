@@ -168,6 +168,9 @@ saveBtn.addEventListener('click', () => {
 
   // 배경(모나리자) + 워핑 합성
   ec.drawImage(monaLisaImg, 0, 0, canvas.width, canvas.height);
+  // 배경: 실시간 카메라 프레임
+  ec.drawImage(video, 0, 0, canvas.width, canvas.height);
+
   ec.drawImage(canvas, 0, 0);
 
   exportCanvas.toBlob(blob => {
