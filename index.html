@@ -2,37 +2,26 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-  <meta name="theme-color" content="#fafafa"/>
-  <title>MonaLisa 얼굴 바로 매핑</title>
-  <link rel="stylesheet" href="./style.css" type="text/css"/>
+  <meta charset="UTF-8">
+  <title>으악 내가 모나리자라닝,,</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="container">
-    <!-- 항상 보이는 Mona Lisa -->
-    <img id="mona-lisa" src="monalisa.jpg" alt="Mona Lisa" loading="lazy"/>
-    <!-- 얼굴 매핑 전용 캔버스 -->
+    <img id="mona-lisa" src="monalisa.jpg" alt="Mona Lisa">
     <canvas id="canvas"></canvas>
   </div>
 
-  <!-- 백그라운드 비디오 (숨김) -->
-  <video
-  id="video"
-  autoplay
-  muted
-  playsinline
-  webkit-playsinline
-  style="display:none;"
-  ></video>
-
+  <!-- 비디오 스트림은 화면에 표시하지 않음 -->
+  <video id="video" autoplay muted playsinline style="display:none;"></video>
 
   <div id="controls">
-    <button id="captureBtn" type="button">사진 찍기</button>
-    <button id="saveBtn"    type="button" style="display:none;">저장하기</button>
+    <button id="snap">사진 찍기</button>
+    <button id="save">저장하기</button>
   </div>
 
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script defer src="https://unpkg.com/delaunator@5.0.0/delaunator.min.js"></script>
   <script defer src="script.js"></script>
 </body>
 </html>
