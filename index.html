@@ -2,55 +2,41 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <!-- iOS 웹앱 & Android theme-color 지정 -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="theme-color" content="#fafafa"/>
-  <title>MonaLisa 실시간 합성</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>3D Mona Lisa Warp (Three.js + ESM)</title>
+  <!-- 1) 뷰포트 설정: 모바일 확대/축소 방지 & 화면 너비에 맞춤 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <style>
+    body { margin: 0; overflow: hidden; }
+    /* 2) 영상/캔버스 비율 유지 */
+    video, canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      object-fit: cover;
+    }
+  </style>
 </head>
 <body>
-  <h1>으악 내가 모나리자라닝,,</h1>
-  <!-- 원본 비율 유지 이미지 -->
-  <img
-    id="mona-lisa"
-    src="monalisa.jpg"
-    alt="Mona Lisa"
-    loading="lazy"
-  />
+  <!-- 3) playsinline: iOS에서 전체화면 전환 없이 바로 재생 -->
+  <video id="video" autoplay muted playsinline></video>
+  <canvas id="threejsCanvas"></canvas>
+  <!-- 4) CORS 회피용 crossOrigin 속성 추가 -->
+  <img id="mona" src="monalisa.jpg" crossOrigin="anonymous" style="display:none">
 
-  <!-- 비디오 + 캔버스 컨테이너 -->
-  <div id="video-container">
-    <video
-      id="video"
-      autoplay
-      playsinline
-      muted
-    ></video>
-    <canvas id="canvas"></canvas>
-  </div>
+  <!-- 5) TF.js + WASM 백엔드 -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.19.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@3.19.0/dist/tf-backend-wasm.js"></script>
 
-  <!-- 컨트롤 버튼 -->
-  <div id="controls">
-    <button
-      id="captureBtn"
-      type="button"
-      aria-disabled="false"
-    >사진찍기</button>
-    <button
-      id="saveBtn"
-      type="button"
-      aria-disabled="true"
-      style="display:none;"
-    >저장하기</button>
-  </div>
+  <!-- 6) MediaPipe FaceMesh & face-landmarks-detection -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@1.0.6/dist/face-landmarks-detection.min.js"></script>
 
-  <!-- face-api.js & Delaunator -->
-  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-  <script defer src="https://unpkg.com/delaunator@5.0.0/delaunator.min.js"></script>
-  <!-- 메인 스크립트 -->
-  <script defer src="script.js"></script>
+  <!-- 7) Delaunator (Delaunay 트라이앵글) -->
+  <script src="https://unpkg.com/delaunator@5.0.0/delaunator.min.js"></script>
+
+  <!-- 8) 메인 모듈 (ESM) -->
+  <script type="module" src="script.js"></script>
 </body>
 </html>
