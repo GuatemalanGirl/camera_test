@@ -8,13 +8,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
   <style>
-    body { margin: 0; overflow: hidden; }
-    /* 2) 영상/캔버스 비율 유지 */
+    body, html {
+      margin: 0; padding: 0; overflow: hidden;
+    }
     video, canvas {
-      position: absolute;
-      top: 0; left: 0;
+      position: absolute; top: 0; left: 0;
+      /* 화면에 꽉 차지만 비율 유지(여백 발생 가능) */
       width: 100vw; height: 100vh;
-      object-fit: cover;
+      object-fit: contain;
     }
   </style>
 </head>
