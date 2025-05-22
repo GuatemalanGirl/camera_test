@@ -51,6 +51,22 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.m
   camera.position.set(0, 0, 1);
   camera.lookAt(0, 0, 0);
 
+  function resizeCanvas() {
+    const cw = canvas.clientWidth;
+    const ch = canvas.clientHeight;
+    // ① 렌더러 화면 크기 동기화
+    renderer.setSize(cw, ch);
+    // ② Orthographic 카메라 프로젝션 동기화
+    camera.left   = -cw/2;
+    camera.right  =  cw/2;
+    camera.top    =  ch/2;
+    camera.bottom = -ch/2;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();  // 최초 한 번 호출
+
+
   // 5) FaceMesh detector 생성
   const detector = await faceLandmarksDetection.createDetector(
     faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh, {
@@ -105,22 +121,24 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.m
 
   // 10) 애니메이션 루프: 매 프레임 FaceMesh → 메모리 릭 방지(tf.tidy)
   async function animate() {
-    const faces = await tf.tidy(() => detector.estimateFaces(video));
-
-    if (faces.length) {
-      const kp  = faces[0].keypoints;
-      const pos = geometry.attributes.position.array;
-      kp.forEach(({ x, y }, i) => {
-        pos[i*3 + 0] = x - vw/2;
-        pos[i*3 + 1] = vh/2 - y;
-        pos[i*3 + 2] = 0;
-      });
-      geometry.attributes.position.needsUpdate = true;
-    }
-
-    renderer.render(scene, camera);
-    requestAnimationFrame(animate);
+  const faces = await tf.tidy(() => detector.estimateFaces(video));
+  if (faces.length) {
+    const { clientWidth: cw, clientHeight: ch } = canvas;
+    const pos = geometry.attributes.position.array;
+    faces[0].keypoints.forEach(({ x, y }, i) => {
+      // 1) 비디오 픽셀 좌표 → CSS 픽셀 좌표
+      const sx = ( x / video.videoWidth  ) * cw;
+      const sy = ( y / video.videoHeight ) * ch;
+      // 2) CSS 픽셀 좌표 → Three.js 월드좌표
+      pos[i*3 + 0] = sx - cw/2;
+      pos[i*3 + 1] = ch/2 - sy;
+      pos[i*3 + 2] = 0;
+    });
+    geometry.attributes.position.needsUpdate = true;
   }
-  animate();
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+animate();
 
 })();
